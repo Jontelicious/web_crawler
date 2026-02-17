@@ -19,13 +19,15 @@ async def main_async():
     
     print("Argument:", sys.argv[1])
 
-    page_data = await crawl_site_async(sys.argv[1], max_concurrency=1)
+    page_data = await crawl_site_async(sys.argv[1], max_concurrency=5)
 
-    for url, data in page_data.values():
+    for url, data in page_data.items():
+        if data is None:
+            continue
         print(f"URL: {url}")
         print(f"H1: {data['h1']}")
 
-    print(f"Found {len(page_data)} total pages!")
+        print(f"Found {len(page_data)} total pages!")
 
 if __name__ == "__main__":
     asyncio.run(main_async())

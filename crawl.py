@@ -78,10 +78,9 @@ class AsyncCrawler:
     async def add_page_visit(self, normalized_url):
         async with self.lock:
             if normalized_url not in self.page_data:
-                self.page_data[normalized_url] = 1
+                self.page_data[normalized_url] = None
                 return True
             else:
-                self.page_data[normalized_url] += 1
                 return False
             
     async def get_html(self, url):
