@@ -1,6 +1,7 @@
 import asyncio
 import sys
 from crawl import crawl_site_async
+from csv_report import write_csv_report
 
 async def main_async():
 
@@ -35,7 +36,10 @@ async def main_async():
         print(f"URL: {url}")
         print(f"H1: {data['h1']}")
 
+
     print(f"Found {len(page_data)} total pages!")
+    write_csv_report(page_data)
+    print("Report written to report.csv")
 
     sys.exit(0)
 
