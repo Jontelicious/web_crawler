@@ -1,52 +1,58 @@
 import asyncio
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urljoin, urlparse
+
 import aiohttp
 from bs4 import BeautifulSoup
-import requests
+
 
 def normalize_url(url):
     parsed_url = urlparse(url)
     normalized_url = f"{parsed_url.netloc}{parsed_url.path}"
-    if normalized_url.endswith('/'):
+    if normalized_url.endswith("/"):
         normalized_url = normalized_url[:-1]
     return normalized_url
 
+
 def get_h1_from_html(html):
-    soup = BeautifulSoup(html, 'html.parser')
-    h1_tag = soup.find('h1')
+    soup = BeautifulSoup(html, "html.parser")
+    h1_tag = soup.find("h1")
     if h1_tag:
         return h1_tag.get_text()
     return None
 
+
 def get_first_paragraph_from_html(html):
-    soup = BeautifulSoup(html, 'html.parser')
+    soup = BeautifulSoup(html, "html.parser")
     p_tag = None
-    main = soup.find('main')
+    main = soup.find("main")
     if main:
-        p_tag = main.find('p')
+        p_tag = main.find("p")
 
     if p_tag is None:
-        p_tag = soup.find('p')
+        p_tag = soup.find("p")
 
     return p_tag.get_text() if p_tag else ""
 
+
 def get_urls_from_html(html, base_url):
-    soup = BeautifulSoup(html, 'html.parser')
+    soup = BeautifulSoup(html, "html.parser")
     urls = []
-    for a_tag in soup.find_all('a', href=True):
-        href = a_tag['href']
+    for a_tag in soup.find_all("a", href=True):
+        href = a_tag["href"]
         absolute_url = urljoin(base_url, href)
         urls.append(absolute_url)
     return urls
 
+
 def get_images_from_html(html, base_url):
-    soup = BeautifulSoup(html, 'html.parser')
+    soup = BeautifulSoup(html, "html.parser")
     images = []
-    for img_tag in soup.find_all('img', src=True):
-        src = img_tag['src']
+    for img_tag in soup.find_all("img", src=True):
+        src = img_tag["src"]
         absolute_url = urljoin(base_url, src)
         images.append(absolute_url)
     return images
+
 
 def extract_page_data(html, page_url):
     return {
@@ -54,7 +60,7 @@ def extract_page_data(html, page_url):
         "h1": get_h1_from_html(html),
         "first_paragraph": get_first_paragraph_from_html(html),
         "outgoing_links": get_urls_from_html(html, page_url),
-        "image_urls": get_images_from_html(html, page_url)
+        "image_urls": get_images_from_html(html, page_url),
     }
 
 
@@ -82,10 +88,9 @@ class AsyncCrawler:
     async def add_page_visit(self, normalized_url):
 
         async with self.lock:
-            
             if self.should_stop is True:
                 return False
-            
+
             if self.pages_crawled >= self.max_pages:
                 self.should_stop = True
                 print("Reached maximum number of pages to crawl.")
@@ -98,7 +103,7 @@ class AsyncCrawler:
                 return True
             else:
                 return False
-            
+
     async def get_html(self, url):
 
         try:
@@ -116,8 +121,7 @@ class AsyncCrawler:
         except Exception as e:
             print(f"Error fetching {url}: {e}")
             return None
-        
-    
+
     async def crawl_page(self, current_url=None):
 
         if self.should_stop is True:
@@ -125,12 +129,12 @@ class AsyncCrawler:
 
         if urlparse(current_url).netloc != self.base_domain:
             return
-        
+
         normalized_url = normalize_url(current_url)
 
         if not await self.add_page_visit(normalized_url):
             return
-        
+
         async with self.semaphore:
             print(
                 f"Crawling {current_url} (Active: {self.max_concurrency - self.semaphore._value})"
@@ -138,17 +142,17 @@ class AsyncCrawler:
             html = await self.get_html(current_url)
             if html is None:
                 return
-            
+
         if self.should_stop is True:
             return
-            
+
         async with self.lock:
             page_info = extract_page_data(html, current_url)
             self.page_data[normalized_url] = page_info
             self.pages_crawled += 1
 
-        next_urls= get_urls_from_html(html, self.base_url)
-        
+        next_urls = get_urls_from_html(html, self.base_url)
+
         tasks = []
         for url in next_urls:
             task = asyncio.create_task(self.crawl_page(url))
@@ -165,7 +169,8 @@ class AsyncCrawler:
     async def crawl(self):
         await self.crawl_page(self.base_url)
         return self.page_data
-    
+
+
 async def crawl_site_async(base_url, max_concurrency, max_pages=100):
     async with AsyncCrawler(base_url, max_concurrency, max_pages=max_pages) as crawler:
         page_data = await crawler.crawl()
